@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Search, Calendar, MapPin, Sparkles, List, Loader2 } from 'lucide-react';
+import { Search, Calendar, MapPin, Sparkles, List, Loader2, ExternalLink } from 'lucide-react';
 
-// Initialize Supabase Client
-// In production, use process.env.REACT_APP_SUPABASE_URL
-const supabaseUrl = 'https://rjdfyhommrglmpqxmxby.supabase.co/rest/v1/';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZGZ5aG9tbXJnbG1wcXhteGJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjU5NjQsImV4cCI6MjA5NDEwMTk2NH0.G9pnrZk_l7RVdRsxy50EVAdjtHtvS2yaaMg-71rGVOk';
+// Initialize Supabase Client using Vite Environment Variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function EventApp() {
@@ -14,19 +13,19 @@ export default function EventApp() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 1. Fetch Data from Supabase
+  // 1. Fetch Data from Supabase using your exact column titles
   useEffect(() => {
     async function fetchEvents() {
       setLoading(true);
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('date', { ascending: true });
+        .order('Date', { ascending: true }); // Matches your 'Date' column
 
       if (error) {
         console.error('Error fetching events:', error);
       } else {
-        setEvents(data);
+        setEvents(data || []);
       }
       setLoading(false);
     }
@@ -34,18 +33,17 @@ export default function EventApp() {
     fetchEvents();
   }, []);
 
-  // 2. Filter Logic for Search
+  // 2. Filter Logic for Search (Title and Genres)
   const filteredEvents = events.filter(event => 
-    event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.genre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.vibe.toLowerCase().includes(searchTerm.toLowerCase())
+    event['Event Title']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event['Genres']?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
-        <Loader2 className="animate-spin text-indigo-600" size={40} />
-        <p className="mt-4 text-gray-500 font-medium">Loading NYC vibes...</p>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 text-indigo-600">
+        <Loader2 className="animate-spin" size={40} />
+        <p className="mt-4 font-bold tracking-widest text-xs uppercase">Loading NYC Vibes</p>
       </div>
     );
   }
@@ -59,58 +57,54 @@ export default function EventApp() {
         </h1>
       </header>
 
-      {/* Screen 1: Explore */}
+      {/* Screen 1: Explore View */}
       {view === 'explore' && (
-        <main className="p-4 space-y-6 animate-in fade-in duration-500">
-          {/* Search/Filters */}
-          <section className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-              <input 
-                className="w-full pl-10 pr-4 py-2.5 border rounded-2xl bg-white outline-none focus:ring-2 focus:ring-black transition-all" 
-                placeholder="Search vibe, genre, or area..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {['Brooklyn', 'Manhattan', 'Soulful', 'Afrobeats'].map(tag => (
-                <button 
-                  key={tag} 
-                  onClick={() => setSearchTerm(tag)}
-                  className="px-4 py-1.5 bg-white border border-gray-200 rounded-full whitespace-nowrap shadow-sm text-xs font-semibold hover:bg-gray-50"
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
+        <main className="p-4 space-y-6">
+          {/* Search Bar */}
+          <section className="relative">
+            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+            <input 
+              className="w-full pl-10 pr-4 py-2.5 border rounded-2xl bg-white outline-none focus:ring-2 focus:ring-black transition-all" 
+              placeholder="Search by title or genre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </section>
 
-          {/* Cards */}
+          {/* Event Cards */}
           <section className="grid gap-6">
-            {filteredEvents.map(event => (
-              <div key={event.id} className="group bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                <div className="h-48 bg-gray-200 relative">
-                  <img 
-                    src={event.image_url || `https://source.unsplash.com/featured/?${event.genre},party`} 
-                    alt={event.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded">
-                      {event.genre}
+            {filteredEvents.map((event, idx) => (
+              <div key={idx} className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100">
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded">
+                      {event['Genres']}
                     </span>
                   </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-xl font-bold text-gray-900 leading-tight">{event.title}</h3>
+                  
+                  <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                    {event['Event Title']}
+                  </h3>
+                  
                   <p className="text-gray-500 text-sm mt-2 line-clamp-2 italic leading-relaxed">
-                    "{event.summary}"
+                    "{event['Vibe Summary']}"
                   </p>
+
                   <div className="mt-5 pt-4 border-t border-gray-50 flex justify-between items-center text-[11px] font-bold text-gray-400 uppercase tracking-tighter">
-                    <div className="flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {event.venue}</div>
-                    <div className="flex items-center gap-1.5"><Calendar size={14} className="text-indigo-500"/> {event.date}</div>
+                    <div className="flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {event['Venue']}</div>
+                    <div className="flex items-center gap-1.5"><Calendar size={14} className="text-indigo-500"/> {event['Date']}</div>
                   </div>
+
+                  {event['Website'] && (
+                    <a 
+                      href={event['Website']} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="mt-4 flex items-center justify-center gap-2 w-full bg-black text-white py-3 rounded-2xl text-xs font-black tracking-widest hover:bg-gray-800 transition-colors"
+                    >
+                      VIEW DETAILS <ExternalLink size={14} />
+                    </a>
+                  )}
                 </div>
               </div>
             ))}
@@ -118,45 +112,8 @@ export default function EventApp() {
         </main>
       )}
 
-      {/* Screen 2: Calendar List */}
+      {/* Screen 2: Calendar List View */}
       {view === 'calendar' && (
-        <main className="p-4 animate-in slide-in-from-bottom-4 duration-400">
+        <main className="p-4">
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            {events.map((event, idx) => (
-              <div key={event.id} className={`p-5 flex items-center gap-4 ${idx !== events.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                <div className="flex flex-col items-center justify-center min-w-[50px] py-2 bg-gray-50 rounded-xl">
-                  <span className="text-[10px] font-black text-indigo-600 uppercase">{event.date.split(' ')[0]}</span>
-                  <span className="text-lg font-black text-gray-900">{event.date.split(' ')[1]}</span>
-                </div>
-                <div className="flex-1">
-                  <span className="font-bold text-gray-900 block leading-tight">{event.title}</span>
-                  <span className="text-xs text-gray-400 font-medium">{event.venue} • {event.time}</span>
-                </div>
-                <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-              </div>
-            ))}
-          </div>
-        </main>
-      )}
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] bg-black rounded-full py-3 px-8 flex justify-between items-center shadow-2xl z-30">
-        <button 
-          onClick={() => setView('explore')} 
-          className={`flex flex-col items-center transition-colors ${view === 'explore' ? 'text-white' : 'text-gray-500'}`}
-        >
-          <Sparkles size={20} />
-          <span className="text-[9px] mt-1 font-black tracking-widest">EXPLORE</span>
-        </button>
-        <div className="h-6 w-[1px] bg-gray-800"></div>
-        <button 
-          onClick={() => setView('calendar')} 
-          className={`flex flex-col items-center transition-colors ${view === 'calendar' ? 'text-white' : 'text-gray-500'}`}
-        >
-          <List size={20} />
-          <span className="text-[9px] mt-1 font-black tracking-widest">LIST</span>
-        </button>
-      </nav>
-    </div>
-  );
-}
+            {events.
